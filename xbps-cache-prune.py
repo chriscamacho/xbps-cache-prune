@@ -9,6 +9,14 @@ import getopt
 # TODO should be defaulted parameter ??
 cache_path = '/var/cache/xbps/'
 
+# https://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size#1094933
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
 def usage():
     print(sys.argv[0],'must specify -n for number of packages to keep')
     print("a value of 3 is suggested (current version +2)")
@@ -63,6 +71,8 @@ def main(argv):
         h = [fn[0:fn.rfind('-')] for fn in h]
         heldDeps.extend(h)
 
+    totalBytes = 0
+
     for pkg in pkg_names:
         # pkg = package name
         # vers = filenames
@@ -82,15 +92,22 @@ def main(argv):
                     #print (pkg, len(vers))
                     #for vfn in vers:
                     #    print('',vfn[0])
+
+
+
                     if dryRun==True:
                         print ('deletion candidates')
                         for vfn in vers[:-keep_n]:
                             print('',vfn[0])
+                            totalBytes += os.path.getsize(cache_path+vfn[0])
+                            totalBytes += os.path.getsize(cache_path+vfn[0]+".sig")
                     else:
                         print ('deletion list')
                         for vfn in vers[:-keep_n]:
                             print('',vfn[0])
                             os.remove(cache_path+vfn[0])
+                            totalBytes += os.path.getsize(cache_path+vfn[0])
+                            totalBytes += os.path.getsize(cache_path+vfn[0]+".sig")
             else:
                 pass
                 # TODO verbose option
@@ -102,6 +119,7 @@ def main(argv):
     if (dryRun):
         print()
         print("No files were deleted (dry run)")
+        print("potentially",sizeof_fmt(totalBytes),"bytes could be deleted")
     else:
         #print("deleting sig orphans")
         file_names = os.listdir(cache_path)
@@ -115,7 +133,9 @@ def main(argv):
                 os.remove(fn)
                 count+=1
         print(count,"sig files removed")
-
+        print("total of",sizeof_fmt(totalBytes),"bytes removed")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+
+
