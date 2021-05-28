@@ -27,8 +27,9 @@ def main(argv):
     global cache_path
     keep_n = 1000
     dryRun = True
+    verbose = False
     try:
-        opts, args = getopt.getopt(argv,"n:d:c:",[])
+        opts, args = getopt.getopt(argv,"n:d:c:v",[])
     except getopt.GetoptError:
         print("opts exception")
         usage()
@@ -40,6 +41,8 @@ def main(argv):
             dryRun = arg.lower() == 'true'
         elif opt == "-c":
             cache_path = arg
+        elif opt == "-v":
+            verbose = True
 
     if keep_n == 1000:  #hmmm
         usage()
@@ -50,6 +53,8 @@ def main(argv):
 
     if not cache_path.endswith("/"):
         cache_path += "/"
+    if verbose:
+        print("package cache location: " + cache_path)
 
     # all files ending .xbps
     file_names = os.listdir(cache_path)
@@ -94,10 +99,10 @@ def main(argv):
                 vers = [[pn,os.stat(cache_path+pn).st_ctime] for pn in vers]
                 vers.sort(key=itemgetter(1))
                 if (len(vers) > keep_n):
-                    # TODO verbose option
-                    #print (pkg, len(vers))
-                    #for vfn in vers:
-                    #    print('',vfn[0])
+                    if verbose:
+                        print (pkg, len(vers))
+                        for vfn in vers:
+                            print('',vfn[0])
 
 
 
@@ -114,14 +119,10 @@ def main(argv):
                             os.remove(cache_path+vfn[0])
                             totalBytes += os.path.getsize(cache_path+vfn[0])
                             totalBytes += os.path.getsize(cache_path+vfn[0]+".sig")
-            else:
-                pass
-                # TODO verbose option
-                #print('package ',pkg,' is dependency of a held package so skipping')
-        else:
-            pass
-            # TODO verbose option
-            #print('package ',pkg,' is held so skipping')
+            elif verbose:
+                print('package ',pkg,' is dependency of a held package so skipping')
+        elif verbose:
+            print('package ',pkg,' is held so skipping')
     if (dryRun):
         print()
         print("No files were deleted (dry run)")
