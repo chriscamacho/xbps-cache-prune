@@ -6,7 +6,6 @@ from operator import itemgetter
 import sys
 import getopt
 
-# TODO should be defaulted parameter ??
 cache_path = '/var/cache/xbps/'
 
 # https://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size#1094933
@@ -21,13 +20,15 @@ def usage():
     print(sys.argv[0],'must specify -n for number of packages to keep')
     print("a value of 3 is suggested (current version +2)")
     print("-d false to actually delete cache items")
+    print("using -c /some/dir changes the default cache location of " + cache_path)
     sys.exit(-1)
 
 def main(argv):
+    global cache_path
     keep_n = 1000
     dryRun = True
     try:
-        opts, args = getopt.getopt(argv,"n:d:",[])
+        opts, args = getopt.getopt(argv,"n:d:c:",[])
     except getopt.GetoptError:
         print("opts exception")
         usage()
@@ -35,8 +36,10 @@ def main(argv):
     for opt, arg in opts:
         if opt == "-n":
             keep_n = int(arg)
-        if opt == "-d":
+        elif opt == "-d":
             dryRun = arg.lower() == 'true'
+        elif opt == "-c":
+            cache_path = arg
 
     if keep_n == 1000:  #hmmm
         usage()
@@ -44,6 +47,9 @@ def main(argv):
     if keep_n<2:
         print("refusing to prune that much")
         exit(0)
+
+    if not cache_path.endswith("/"):
+        cache_path += "/"
 
     # all files ending .xbps
     file_names = os.listdir(cache_path)
@@ -57,7 +63,7 @@ def main(argv):
     pkg_names = list(set(pkg_names))
 
     # get a list of held packages
-    s = subprocess.Popen(["xbps-query -H"], shell=True, stdout=subprocess.PIPE).stdout
+    s = subprocess.Popen([f"xbps-query --cachedir={cache_path} -H"], shell=True, stdout=subprocess.PIPE).stdout
     held = s.read().splitlines()
     held = [fn.decode("utf-8") for fn in held]
     held = [fn[0:fn.rfind('-')] for fn in held]
@@ -65,7 +71,7 @@ def main(argv):
     # and a list of dependencies for held packages
     heldDeps=list()
     for hd in held:
-        s = subprocess.Popen(["xbps-query --fulldeptree -x "+hd], shell=True, stdout=subprocess.PIPE).stdout
+        s = subprocess.Popen([f"xbps-query --cachedir={cache_path} --fulldeptree -x {hd}"], shell=True, stdout=subprocess.PIPE).stdout
         h = s.read().splitlines()
         h = [fn.decode("utf-8") for fn in h]
         h = [fn[0:fn.rfind('-')] for fn in h]
